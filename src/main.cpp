@@ -13,6 +13,9 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
+#include <Preferences.h>
+
 
 // =========================================================================
 // CONFIG
@@ -60,6 +63,7 @@ struct Command {
 // GLOBALS & STATE
 // =========================================================================
 QueueHandle_t cmdQueue;
+Preferences preferences;
 portMUX_TYPE  stateMutex = portMUX_INITIALIZER_UNLOCKED;
 
 bool          relayState[RELAY_COUNT]     = {};
@@ -205,6 +209,12 @@ bool executeRelay(int idx, bool on, CommandSource src) {
 
   relayState[idx] = on;
   digitalWrite(RELAY_PINS[idx], RELAY_ACTIVE_LOW ? (on ? LOW : HIGH) : (on ? HIGH : LOW));
+  
+  // Save to NVS outside critical section
+  portEXIT_CRITICAL(&stateMutex);
+  preferences.putBool(String(idx).c_str(), on);
+  
+  portENTER_CRITICAL(&stateMutex);
   lastCmdTime[idx] = now;
   if (src == SRC_TOUCH) lastTouchTime[idx] = now;
   portEXIT_CRITICAL(&stateMutex);
@@ -227,6 +237,7 @@ void processCommandQueue() {
         eraLog("RELAY", "%s -> %s (ALL src=%s)", APPLIANCE_NAMES[i], target ? "ON" : "OFF", SOURCE_NAMES[cmd.source]);
       }
       portEXIT_CRITICAL(&stateMutex);
+      for (int i = 0; i < RELAY_COUNT; i++) preferences.putBool(String(i).c_str(), target);
       diag.cmdsExecuted++;
     } else {
       bool targetOn;
@@ -408,11 +419,16 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
+  preferences.begin("relays", false);
   for (int i = 0; i < RELAY_COUNT; i++) {
+    bool savedState = preferences.getBool(String(i).c_str(), false);
+    relayState[i] = savedState;
+    
+    // Set level BEFORE pinMode to guarantee zero hardware glitch/flicker on reboot
+    digitalWrite(RELAY_PINS[i], RELAY_ACTIVE_LOW ? (savedState ? LOW : HIGH) : (savedState ? HIGH : LOW));
     pinMode(RELAY_PINS[i], OUTPUT);
-    digitalWrite(RELAY_PINS[i], RELAY_ACTIVE_LOW ? HIGH : LOW);
-    relayState[i] = false;
-    eraLog("INIT", "Relay %d (%s) GPIO %d -> OFF", i + 1, APPLIANCE_NAMES[i], RELAY_PINS[i]);
+    
+    eraLog("INIT", "Relay %d (%s) GPIO %d -> Restored %s", i + 1, APPLIANCE_NAMES[i], RELAY_PINS[i], savedState ? "ON" : "OFF");
   }
   for (int i = 0; i < TOUCH_COUNT; i++) {
     pinMode(TOUCH_PINS[i], INPUT_PULLDOWN);
@@ -426,6 +442,12 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   eraLog("WIFI", "Connecting to %s...", WIFI_SSID);
 
+  ArduinoOTA.setHostname(NODE_ID);
+  // ArduinoOTA.setPassword("admin"); // Uncomment if you want an OTA password
+  ArduinoOTA.onStart([]() { eraLog("OTA", "Update started"); });
+  ArduinoOTA.onEnd([]() { eraLog("OTA", "Update finished. Rebooting..."); });
+  ArduinoOTA.begin();
+
   digitalWrite(LED_PIN, LOW);
   eraLog("ERA", "Hardware Loop ready");
 }
@@ -435,6 +457,7 @@ void setup() {
 // =========================================================================
 void loop() {
   unsigned long now = millis();
+  ArduinoOTA.handle();
   handleSerial();
 
   for (int i = 0; i < TOUCH_COUNT; i++) {

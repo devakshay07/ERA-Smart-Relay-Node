@@ -15,6 +15,7 @@ It perfectly balances lightning-fast local physical controls with comprehensive 
 ## 🚀 Core Features
 
 - **Fully Standalone:** No master server dependencies. Control it directly via local HTTP POST requests.
+- **Zero-Disturbance OTA Updates:** Flash new firmware over Wi-Fi (`ArduinoOTA`). Relays remember their state in NVS and restore perfectly on reboot without flickering the appliances.
 - **ESPAsyncWebServer:** Fully asynchronous HTTP API — no main-loop blocking.
 - **Smart Queue Eviction:** A 16-slot queue prioritizes local touch over network API spam. If the network spams the queue, touch events forcibly evict old API calls.
 - **Background WiFi Resilience:** Async WiFi event handling ensures the board never hangs during reconnects.
