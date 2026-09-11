@@ -8,17 +8,16 @@
   <a href="https://platformio.org/"><img src="https://img.shields.io/badge/PlatformIO-Ready-orange.svg" alt="PlatformIO"></a>
 </p>
 
-**ERA Smart Node** is a hyper-optimized, dual-core FreeRTOS firmware for the ESP32 Dev Module (38-pin), designed to serve as a robust, non-blocking controller for up to 6 smart home appliances with integrated capacitive touch fallback.
+**ERA Smart Node** is a hyper-optimized, standalone FreeRTOS firmware for the ESP32 Dev Module (38-pin), designed to serve as a robust, non-blocking controller for up to 6 smart home appliances with integrated capacitive touch fallback.
 
-Built as the edge-node for the ERA v3 Ecosystem, it perfectly balances lightning-fast local physical controls with comprehensive remote REST APIs.
+It perfectly balances lightning-fast local physical controls with comprehensive remote REST APIs via an asynchronous web server. No master server required.
 
 ## 🚀 Core Features
 
-- **True Dual-Core FreeRTOS Split:** Hardware tasks (relays/touch) run strictly on Core 1, while Core 0 handles network I/O, guaranteeing zero missed touch inputs.
+- **Fully Standalone:** No master server dependencies. Control it directly via local HTTP POST requests.
 - **ESPAsyncWebServer:** Fully asynchronous HTTP API — no main-loop blocking.
 - **Smart Queue Eviction:** A 16-slot queue prioritizes local touch over network API spam. If the network spams the queue, touch events forcibly evict old API calls.
 - **Background WiFi Resilience:** Async WiFi event handling ensures the board never hangs during reconnects.
-- **State Broadcasts:** Automatically POSTs state changes to the master server instantly.
 
 ---
 
@@ -26,24 +25,21 @@ Built as the edge-node for the ERA v3 Ecosystem, it perfectly balances lightning
 
 ```mermaid
 graph TD
-    subgraph Core 1 [Core 1 - Hardware Task]
+    subgraph Execution Loop
         A(Touch Sensors) -->|digitalRead| B{Debounce}
         B -->|Valid Touch| C(Priority Enqueue)
         S(Serial Input) --> C
         C --> D[cmdQueue - 16 Slots]
         D -->|Execute| E(Toggle Relays)
-        E -->|State Changed| F[netQueue]
     end
 
-    subgraph Core 0 [Core 0 - Network Task]
-        F --> G(Process Event)
-        G --> H[Async HTTP POST to Server]
+    subgraph Async Network
         W(WiFi Events) --> I(Auto Reconnect)
         API(Incoming API Request) -->|ESPAsyncWebServer| C
     end
     
-    style Core 1 fill:#2b2b2b,stroke:#00ffcc,stroke-width:2px,color:#fff
-    style Core 0 fill:#2b2b2b,stroke:#00aaff,stroke-width:2px,color:#fff
+    style Execution Loop fill:#2b2b2b,stroke:#00ffcc,stroke-width:2px,color:#fff
+    style Async Network fill:#2b2b2b,stroke:#00aaff,stroke-width:2px,color:#fff
 ```
 
 ---
@@ -75,8 +71,7 @@ graph TD
    ```cpp
    const char* WIFI_SSID        = "YOUR_WIFI_SSID";
    const char* WIFI_PASSWORD    = "YOUR_WIFI_PASSWORD";
-   const char* ERA_SERVER_IP    = "192.168.1.100";
-   const char* ERA_API_KEY      = "YOUR_SECRET_API_KEY";
+   const char* NODE_API_KEY     = "YOUR_SECRET_API_KEY";
    ```
 4. Build and upload to your ESP32.
 
@@ -94,6 +89,7 @@ All requests require the `X-API-Key` header or `?api_key=` URL parameter.
 | **POST** | `/relay/<1-6>/off` | Turns the specified appliance OFF. |
 | **POST** | `/relay/<1-6>/toggle`| Toggles the appliance state. |
 | **POST** | `/relay/all/off` | Shuts down all appliances simultaneously. |
+| **POST** | `/relay/all/on` | Turns on all appliances simultaneously. |
 
 ## 📝 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
