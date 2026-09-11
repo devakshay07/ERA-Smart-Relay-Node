@@ -13,6 +13,8 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
+#include <esp_task_wdt.h>
+#include <nvs_flash.h>
 #include <ArduinoOTA.h>
 #include <Preferences.h>
 
@@ -43,6 +45,7 @@ const char* APPLIANCE_NAMES[RELAY_COUNT] = { "Fan", "Light", "TV", "AC", "Geyser
 #define TOUCH_LOCK_MS        600
 #define SERIAL_MAX_LEN       32
 #define CMD_QUEUE_SIZE       16
+#define WDT_TIMEOUT_SECS     10
 
 // =========================================================================
 // ENUMS & STRUCTS
@@ -142,6 +145,7 @@ String buildDiagJson() {
   doc["api_fires"]      = diag.apiFires;
   doc["serial_fires"]   = diag.serialFires;
   doc["wifi_drops"]     = diag.wifiDrops;
+  doc["free_heap"]      = ESP.getFreeHeap();
   String out; serializeJson(doc, out);
   return out;
 }
@@ -398,7 +402,11 @@ void onWiFiEvent(WiFiEvent_t event) {
         wifiConnected = false;
         diag.wifiDrops++;
       }
-      WiFi.reconnect();
+      // Give WiFi stack a moment before violently reconnecting
+      delay(100); 
+      WiFi.disconnect(true);
+      delay(100);
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
       break;
     default: break;
   }
@@ -415,11 +423,21 @@ void setup() {
   Serial.println("=====================================");
 
   cmdQueue = xQueueCreate(CMD_QUEUE_SIZE, sizeof(Command));
+  if (cmdQueue == NULL) {
+    eraLog("FATAL", "RAM exhausted: cmdQueue creation failed!");
+    ESP.restart();
+  }
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
-  preferences.begin("relays", false);
+  // Robust NVS Init
+  if (!preferences.begin("relays", false)) {
+    eraLog("FATAL", "NVS Mount Failed! Formatting...");
+    nvs_flash_erase();
+    nvs_flash_init();
+    preferences.begin("relays", false);
+  }
   for (int i = 0; i < RELAY_COUNT; i++) {
     bool savedState = preferences.getBool(String(i).c_str(), false);
     relayState[i] = savedState;
@@ -440,12 +458,20 @@ void setup() {
   WiFi.onEvent(onWiFiEvent);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Enable Hardware Watchdog
+  esp_task_wdt_init(WDT_TIMEOUT_SECS, true);
+  esp_task_wdt_add(NULL);
+
   eraLog("WIFI", "Connecting to %s...", WIFI_SSID);
 
   ArduinoOTA.setHostname(NODE_ID);
   // ArduinoOTA.setPassword("admin"); // Uncomment if you want an OTA password
   ArduinoOTA.onStart([]() { eraLog("OTA", "Update started"); });
   ArduinoOTA.onEnd([]() { eraLog("OTA", "Update finished. Rebooting..."); });
+  ArduinoOTA.onError([](ota_error_t error) {
+    eraLog("FATAL", "OTA Error[%u]", error);
+    ESP.restart();
+  });
   ArduinoOTA.begin();
 
   digitalWrite(LED_PIN, LOW);
@@ -456,6 +482,7 @@ void setup() {
 // HARDWARE LOOP - STRICTLY NON-BLOCKING
 // =========================================================================
 void loop() {
+  esp_task_wdt_reset(); // Feed the watchdog
   unsigned long now = millis();
   ArduinoOTA.handle();
   handleSerial();
