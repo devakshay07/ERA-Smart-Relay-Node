@@ -13,7 +13,6 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <ArduinoJson.h>
-#include <esp_task_wdt.h>
 #include <nvs_flash.h>
 #include <ArduinoOTA.h>
 #include <Preferences.h>
@@ -24,7 +23,7 @@
 // =========================================================================
 const char* WIFI_SSID        = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD    = "YOUR_WIFI_PASSWORD";
-const char* NODE_API_KEY     = "CHANGE_THIS_KEY"; // Required for incoming requests
+const char* NODE_API_KEY     = "YOUR_SECRET_API_KEY"; // Required for incoming requests
 const char* NODE_ID          = "appliance-01";
 const char* NODE_NAME        = "ERA Appliance Node";
 const int   LOCAL_PORT       = 80;
@@ -459,8 +458,6 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   // Enable Hardware Watchdog
-  esp_task_wdt_init(WDT_TIMEOUT_SECS, true);
-  esp_task_wdt_add(NULL);
 
   eraLog("WIFI", "Connecting to %s...", WIFI_SSID);
 
@@ -482,7 +479,6 @@ void setup() {
 // HARDWARE LOOP - STRICTLY NON-BLOCKING
 // =========================================================================
 void loop() {
-  esp_task_wdt_reset(); // Feed the watchdog
   unsigned long now = millis();
   ArduinoOTA.handle();
   handleSerial();
