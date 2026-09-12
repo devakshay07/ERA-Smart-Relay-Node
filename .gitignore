@@ -1,7 +1,13 @@
-.pio
-.vscode/.browse.c_cpp.db*
-.vscode/c_cpp_properties.json
-.vscode/launch.json
-.vscode/ipch
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code
+.vscode/
+
+# Credentials (NEVER COMMIT)
 include/credentials.h
-include/credentials.h
+
+# macOS
+.DS_Store
