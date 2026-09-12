@@ -50,12 +50,12 @@ graph TD
 ### Relays (Active-LOW) & Touch Sensors
 | Appliance | ESP32 GPIO | Relay (IN) | Touch Sensor (SIG) |
 | :--- | :---: | :---: | :---: |
-| **Fan** | `26` / `4` | `GPIO 26` | `GPIO 4` |
-| **Light** | `27` / `5` | `GPIO 27` | `GPIO 5` |
-| **TV** | `14` / `18` | `GPIO 14` | `GPIO 18` |
-| **AC** | `25` / `19` | `GPIO 25` | `GPIO 19` |
-| **Geyser** | `33` / `23` | `GPIO 33` | `GPIO 23` |
-| **Pump** | `32` / `13` | `GPIO 32` | `GPIO 13` |
+| **Light** | `26` / `4` | `GPIO 26` | `GPIO 4` |
+| **Fan** | `27` / `5` | `GPIO 27` | `GPIO 5` |
+| **Tube light** | `14` / `18` | `GPIO 14` | `GPIO 18` |
+| **Night Lamp** | `25` / `19` | `GPIO 25` | `GPIO 19` |
+| **charger** | `33` / `23` | `GPIO 33` | `GPIO 23` |
+| **RGB lights** | `32` / `13` | `GPIO 32` | `GPIO 13` |
 
 *Note: Connect Relay VCC to external 5V, Touch VCC to ESP32 3.3V, and ensure a common Ground (GND).*
 

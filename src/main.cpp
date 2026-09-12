@@ -36,7 +36,7 @@ const bool  RELAY_ACTIVE_LOW = true;
 
 const int RELAY_PINS[RELAY_COUNT] = {26, 27, 14, 25, 33, 32};
 const int TOUCH_PINS[TOUCH_COUNT] = { 4,  5, 18, 19, 23, 13};
-const char* APPLIANCE_NAMES[RELAY_COUNT] = { "Fan", "Light", "TV", "AC", "Geyser", "Pump" };
+const char* APPLIANCE_NAMES[RELAY_COUNT] = { "Light", "Fan", "Tube light", "Night Lamp", "charger", "RGB lights" };
 
 // Timing
 #define DEBOUNCE_MS          200
