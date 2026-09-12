@@ -21,9 +21,7 @@
 // =========================================================================
 // CONFIG
 // =========================================================================
-const char* WIFI_SSID        = "YOUR_WIFI_SSID";
-const char* WIFI_PASSWORD    = "YOUR_WIFI_PASSWORD";
-const char* NODE_API_KEY     = "YOUR_SECRET_API_KEY"; // Required for incoming requests
+#include "credentials.h" // Contains WIFI_SSID, WIFI_PASSWORD, NODE_API_KEY
 const char* NODE_ID          = "appliance-01";
 const char* NODE_NAME        = "ERA Appliance Node";
 const int   LOCAL_PORT       = 80;
