@@ -452,11 +452,12 @@ void setup() {
     eraLog("INIT", "Touch %d GPIO %d", i + 1, TOUCH_PINS[i]);
   }
 
-  setupAsyncAPI();
-
   WiFi.onEvent(onWiFiEvent);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  // MUST be called after WiFi init, otherwise lwIP panics with 'Invalid mbox'
+  setupAsyncAPI();
   // Enable Hardware Watchdog
 
   eraLog("WIFI", "Connecting to %s...", WIFI_SSID);
