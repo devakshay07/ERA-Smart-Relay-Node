@@ -451,13 +451,6 @@ void setup() {
     
     eraLog("INIT", "Relay %d (%s) GPIO %d -> Restored %s", i + 1, APPLIANCE_NAMES[i], RELAY_PINS[i], savedState ? "ON" : "OFF");
   }
-  // Non-blocking AP Fallback
-  if (!wifiConnected && !apModeActive && ((now - wifiStartTime) > AP_TIMEOUT_MS)) {
-    eraLog("WIFI", "Router dead for 15s. Starting Emergency AP (ERA_EMERGENCY_HUB)");
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP("ERA_EMERGENCY_HUB", "12345678");
-    apModeActive = true;
-  }
 
   for (int i = 0; i < TOUCH_COUNT; i++) {
     pinMode(TOUCH_PINS[i], INPUT_PULLDOWN);
