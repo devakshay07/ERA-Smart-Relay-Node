@@ -75,6 +75,9 @@ unsigned long lastCmdTime[RELAY_COUNT]    = {};
 unsigned long lastTouchTime[RELAY_COUNT]  = {};
 
 bool          wifiConnected   = false;
+bool          apModeActive    = false;
+unsigned long wifiStartTime   = 0;
+const int     AP_TIMEOUT_MS   = 15000;
 unsigned long lastLedToggle   = 0;
 bool          ledState        = false;
 String        serialBuffer    = "";
@@ -406,6 +409,7 @@ void onWiFiEvent(WiFiEvent_t event) {
       WiFi.disconnect(true);
       delay(100);
       WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  wifiStartTime = millis();
       break;
     default: break;
   }
@@ -447,6 +451,14 @@ void setup() {
     
     eraLog("INIT", "Relay %d (%s) GPIO %d -> Restored %s", i + 1, APPLIANCE_NAMES[i], RELAY_PINS[i], savedState ? "ON" : "OFF");
   }
+  // Non-blocking AP Fallback
+  if (!wifiConnected && !apModeActive && ((now - wifiStartTime) > AP_TIMEOUT_MS)) {
+    eraLog("WIFI", "Router dead for 15s. Starting Emergency AP (ERA_EMERGENCY_HUB)");
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP("ERA_EMERGENCY_HUB", "12345678");
+    apModeActive = true;
+  }
+
   for (int i = 0; i < TOUCH_COUNT; i++) {
     pinMode(TOUCH_PINS[i], INPUT_PULLDOWN);
     eraLog("INIT", "Touch %d GPIO %d", i + 1, TOUCH_PINS[i]);
@@ -455,6 +467,7 @@ void setup() {
   WiFi.onEvent(onWiFiEvent);
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  wifiStartTime = millis();
 
   // MUST be called after WiFi init, otherwise lwIP panics with 'Invalid mbox'
   setupAsyncAPI();
@@ -483,6 +496,14 @@ void loop() {
   unsigned long now = millis();
   ArduinoOTA.handle();
   handleSerial();
+
+  // Non-blocking AP Fallback
+  if (!wifiConnected && !apModeActive && ((now - wifiStartTime) > AP_TIMEOUT_MS)) {
+    eraLog("WIFI", "Router dead for 15s. Starting Emergency AP (ERA_EMERGENCY_HUB)");
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP("ERA_EMERGENCY_HUB", "12345678");
+    apModeActive = true;
+  }
 
   for (int i = 0; i < TOUCH_COUNT; i++) {
     bool touched = (digitalRead(TOUCH_PINS[i]) == HIGH);
