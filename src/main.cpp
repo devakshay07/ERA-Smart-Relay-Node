@@ -395,6 +395,11 @@ void onWiFiEvent(WiFiEvent_t event) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
       wifiConnected = true;
+      ArduinoOTA.setHostname(NODE_ID);
+      ArduinoOTA.onStart([]() { eraLog("OTA", "Update started"); });
+      ArduinoOTA.onEnd([]() { eraLog("OTA", "Update finished. Rebooting..."); });
+      ArduinoOTA.onError([](ota_error_t error) { eraLog("FATAL", "OTA Error[%u]", error); ESP.restart(); });
+      ArduinoOTA.begin();
       eraLog("WIFI", "Connected: %s", WiFi.localIP().toString().c_str());
       if (MDNS.begin("era-appliance")) eraLog("MDNS", "era-appliance.local registered");
       break;
@@ -468,15 +473,7 @@ void setup() {
 
   eraLog("WIFI", "Connecting to %s...", WIFI_SSID);
 
-  ArduinoOTA.setHostname(NODE_ID);
-  // ArduinoOTA.setPassword("admin"); // Uncomment if you want an OTA password
-  ArduinoOTA.onStart([]() { eraLog("OTA", "Update started"); });
-  ArduinoOTA.onEnd([]() { eraLog("OTA", "Update finished. Rebooting..."); });
-  ArduinoOTA.onError([](ota_error_t error) {
-    eraLog("FATAL", "OTA Error[%u]", error);
-    ESP.restart();
-  });
-  ArduinoOTA.begin();
+
 
   digitalWrite(LED_PIN, LOW);
   eraLog("ERA", "Hardware Loop ready");
